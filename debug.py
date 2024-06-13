@@ -36,7 +36,8 @@ class Debug:
                 invocation_count = increment_count()
                 if  invocation_count > 2:
                     return func(*args, **kwargs)
-                log_file_path = self.configuration.generateLogFilePath(module_path, function_name)
+                
+                log_file_path = self.function_mapping.get_log_file_path(func)
                 print(f"Log file path: {log_file_path}")
                 
                 log_directory = os.path.dirname(log_file_path)
@@ -48,8 +49,11 @@ class Debug:
                 self.logger.logCall(serialized_args, serialized_kwargs, log_file_path)
 
                 console_log_start = f"<{module_path}.{function_name}>CALL"
-                console_log_args = self._formatConsoleLog(args, kwargs)
-                print(console_log_start + " " + console_log_args)
+                console_log_args = self._formatConsoleLog(args)
+                console_log_kwargs = self._formatConsoleLog(kwargs)
+                print(console_log_start)
+                print(console_log_args)
+                print(console_log_kwargs)
 
                 start_time = time.time()
 
@@ -70,7 +74,10 @@ class Debug:
 
             return wrapper
 
-    def _formatConsoleLog(self, *data: Any) -> str:
+    def _formatConsoleLog(self, data: Any) -> str:
+        if not isinstance(data, tuple):
+            data = (data,)
+
         formatted_data = []
         for item in data:
             if hasattr(item, 'shape') and hasattr(item, 'dtype'):
@@ -78,6 +85,14 @@ class Debug:
             else:
                 formatted_data.append(str(item))
         return ", ".join(formatted_data)
+#    def _formatConsoleLog(self, *data: Any) -> str:
+#        formatted_data = []
+#        for item in data:
+#            if hasattr(item, 'shape') and hasattr(item, 'dtype'):
+#                formatted_data.append(f"shape={item.shape}, dtype={item.dtype}")
+#            else:
+#                formatted_data.append(str(item))
+#        return ", ".join(formatted_data)
 
 obj = Debug(Configuration(), Serializer(), Logger(), FunctionMapping())
 debug = obj.decorate
