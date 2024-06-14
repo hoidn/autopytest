@@ -1,3 +1,47 @@
+# spec
+#    interface FunctionMapping {
+#        """
+#        Retrieves the log file path for a given function.
+#
+#        Preconditions:
+#        - `func` must be a callable.
+#        - `log_directory` must be a valid directory path.
+#        - Expected JSON format: { "log_directory": "string" }
+#
+#        Postconditions:
+#        - Returns the log file path for the given function, formatted as `prefix/module.fname<suffix>.log`.
+#        - If `log_directory` is not provided or is an empty string, returns an empty string.
+#        """
+#        string getLogFilePath(Callable func, string log_directory);
+#
+#        """
+#        Loads a function given its log file path or module path.
+#
+#        Preconditions:
+#        - `log_file_path` must be a valid log file path or empty string.
+#        - `module_path` must be a valid module path or empty string.
+#        - Expected JSON format: { "log_file_path": "string", "module_path": "string" }
+#
+#        Postconditions:
+#        - Returns the function object if successfully loaded.
+#        - If the function cannot be found or imported, returns None.
+#        """
+#        Union[Callable, None] loadFunction(string log_file_path, string module_path);
+#
+#        """
+#        Retrieves the module path for a given function.
+#
+#        Preconditions:
+#        - `func` must be a callable.
+#
+#        Postconditions:
+#        - Returns the module path for the given function, formatted as `module.fname`.
+#        - If `func` is a built-in function or does not have a valid module path, returns an empty string.
+#        """
+#        string getModulePath(Callable func);
+#    };
+
+# implementation
 import os
 import shutil
 import importlib
@@ -30,6 +74,11 @@ class FunctionMapping:
         log_file_path = f"{self.log_directory}/{module_name}.{func_name}.log"
         return log_file_path
 
+    def save_function(self, log_file_path: str, func: Callable) -> None:
+        module_path, func_name = self.get_module_and_function_from_log_path(log_file_path)
+        module = importlib.import_module(module_path)
+        setattr(module, func_name, func)
+
     def load_function_from_path(self, log_file_path: str) -> Optional[Callable]:
         try:
             dprint(f"log_file_path: {log_file_path}")
@@ -54,6 +103,7 @@ class FunctionMapping:
         log_file_path = log_file_path.replace(".log", "")
         dprint(f"log_file_path after removing .log: {log_file_path}")
         parts = log_file_path.rsplit(".", 1)
+        print(parts)
         dprint(f"parts: {parts}")
         module_path = parts[0]
         dprint(f"module_path: {module_path}")
@@ -99,78 +149,37 @@ class FunctionMapping:
         module_path = f"{module_name}.{func_name}"
         return module_path
 
-#def test_load_function_from_log_file_path():
-#    # Create a temporary directory for testing
-#    test_dir = "test_logs"
-#    os.makedirs(test_dir, exist_ok=True)
-#
-#    # Create a temporary module file
-#    module_path = "src/module.py"
-#    os.makedirs(os.path.dirname(module_path), exist_ok=True)
-#    with open(module_path, "w") as f:
-#        f.write("""
-#def helloworld():
-#    return "Hello, World!"
-#""")
-#    print(f"Content of {module_path}:")
-#    with open(module_path, "r") as f:
-#        print(f.read())
-#
-#    try:
-#        # Create an instance of FunctionMapping
-#        function_mapping = FunctionMapping(log_directory=test_dir)
-#
-#        # Get the log file path for the 'helloworld' function
-#        log_file_path = f"{test_dir}/src.module.helloworld.log"
-#
-#        # Load the function from the log file path
-#        loaded_func = function_mapping.load_function(log_file_path)
-#
-#        # Assert that the loaded function is not None
-#        assert loaded_func is not None
-#
-#        # Call the loaded function and check the result
-#        result = loaded_func()
-#        assert result == "Hello, World!"
-#
-#    finally:
-#        # Clean up the temporary directory and module file
-#        shutil.rmtree(test_dir)
-#        shutil.rmtree("src")
-#
-## Run the test case
-#test_load_function_from_log_file_path()
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod(verbose=True)
 
-#def sample_function():
-#    return "sample function executed"
-#
-#def another_function():
-#    return "another function executed"
-#
-#def test_get_log_file_path():
-#    function_mapping = FunctionMapping(log_directory="test_logs")
-#    path = function_mapping.get_log_file_path(sample_function)
-#    assert path == 'test_logs/__main__.sample_function.log', f"Expected 'test_logs/__main__.sample_function.log', got '{path}'"
-#
-#def test_load_function():
-#    function_mapping = FunctionMapping(log_directory="test_logs")
-#    log_file_path = function_mapping.get_log_file_path(sample_function)
-#    
-#    loaded_func = function_mapping.load_function(log_file_path=log_file_path)
-#    assert loaded_func is not None, "Expected function to be loaded, but got None"
-#    assert loaded_func.__name__ == 'sample_function', f"Expected 'sample_function', got '{loaded_func.__name__}'"
-#
-#def test_get_module_path():
-#    function_mapping = FunctionMapping(log_directory="test_logs")
-#    path = function_mapping.get_module_path(sample_function)
-#    assert path == '__main__.sample_function', f"Expected '__main__.sample_function', got '{path}'"
-#
-#if __name__ == "__main__":
-#    test_get_log_file_path()
-#    test_load_function()
-#    test_get_module_path()
-#    print("All tests passed!")
+def sample_function():
+    return "sample function executed"
+
+def another_function():
+    return "another function executed"
+
+def test_get_log_file_path():
+    function_mapping = FunctionMapping(log_directory="test_logs")
+    path = function_mapping.get_log_file_path(sample_function)
+    assert path == 'test_logs/__main__.sample_function.log', f"Expected 'test_logs/__main__.sample_function.log', got '{path}'"
+
+def test_load_function():
+    function_mapping = FunctionMapping(log_directory="test_logs")
+    log_file_path = function_mapping.get_log_file_path(sample_function)
+    
+    loaded_func = function_mapping.load_function(log_file_path=log_file_path)
+    assert loaded_func is not None, "Expected function to be loaded, but got None"
+    assert loaded_func.__name__ == 'sample_function', f"Expected 'sample_function', got '{loaded_func.__name__}'"
+
+def test_get_module_path():
+    function_mapping = FunctionMapping(log_directory="test_logs")
+    path = function_mapping.get_module_path(sample_function)
+    assert path == '__main__.sample_function', f"Expected '__main__.sample_function', got '{path}'"
+
+if __name__ == "__main__":
+    test_get_log_file_path()
+    test_load_function()
+    test_get_module_path()
+    print("All tests passed!")
